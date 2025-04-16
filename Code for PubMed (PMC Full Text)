@@ -1,0 +1,72 @@
+##Importing the Packaage of interest
+import requests
+from bs4 import BeautifulSoup ##for webcrawling
+import pandas as pd
+import time
+
+### Your Browser ID , search "My User Agent" from your browser to gain the term below
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36'
+}
+
+##### Create an empty vector for appending the extracted data
+DocInfoBig = []
+
+# Loop through the pages of results (change range as needed) BUT REMEMBER the limit is 1000 so use filters
+for page in range(1, 301):
+    print(f"Scraping page {page}...")
+
+    url = f'https://pubmed.ncbi.nlm.nih.gov/?term=obesity&filter=simsearch1.fha&filter=simsearch2.ffrft&page={page}'
+    r = requests.get(url, headers=headers)
+    soup = BeautifulSoup(r.text, 'html.parser')
+
+    searchitems = soup.find_all('div', {'class': 'docsum-content'})
+
+    for items in searchitems:
+        try:
+            title = items.find('a', {'class': 'docsum-title'}).text.strip()
+            pmidnumber = items.find('span', {'class': 'docsum-pmid'}).text.strip()
+            linkdoc = f'https://pubmed.ncbi.nlm.nih.gov/{pmidnumber}/'
+
+            # Get full text link
+            fulldoc = requests.get(linkdoc, headers=headers)
+            soup2 = BeautifulSoup(fulldoc.text, 'html.parser')
+            fullitem = soup2.find('a', {'class': 'id-link'})
+
+            if fullitem and fullitem.has_attr('href'):
+                fulltextlink = fullitem['href']
+            else:
+                fulltextlink = None
+
+            # Go to fulltext article if available
+            TextFull= None
+            if fulltextlink:
+                maindoc = requests.get(fulltextlink, headers=headers)
+                soup3 = BeautifulSoup(maindoc.text, 'html.parser')
+                TextFull_section = soup3.find('div', {'class':'grid-row pmc-wm desktop:margin-left-neg-6'})
+                if TextFull_section:
+                    TextFull_p =TextFull_section.find('main')
+                    if TextFull_p:
+                        TextFull = TextFull_p.get_text(strip=True)
+
+            docinfo = {
+                'title': title,
+                'pmidnumber': pmidnumber,
+                'linkdoc': linkdoc,
+                'fulltextlink': fulltextlink,
+                'TextFull': TextFull
+            }
+
+            DocInfoBig.append(docinfo)
+            time.sleep(2)  # polite scraping delay
+
+        except Exception as e:
+            print(f"Error processing article: {e}")
+            continue
+
+# Convert to DataFrame
+PMDocInfo = pd.DataFrame(DocInfoBig)
+PMDocInfo
+
+### Save to Drive or Another location
+PMDocInfo.to_csv('/content/PMDocInfo.csv')## Content drive because the codes were executed with google colab

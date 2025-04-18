@@ -13,10 +13,10 @@ headers = {
 DocInfoBig = []
 
 # Loop through the pages of results (change range as needed) BUT REMEMBER the limit is 1000 so use filters
-for page in range(1, 301):
+for page in range(1, 301):  ### Try to change the page number per the volume of text needed
     print(f"Scraping page {page}...")
 
-    url = f'https://pubmed.ncbi.nlm.nih.gov/?term=obesity&filter=simsearch1.fha&filter=simsearch2.ffrft&page={page}'
+    url = f'https://pubmed.ncbi.nlm.nih.gov/?term=obesity&filter=simsearch1.fha&filter=simsearch2.ffrft&page={page}' 
     r = requests.get(url, headers=headers)
     soup = BeautifulSoup(r.text, 'html.parser')
 
